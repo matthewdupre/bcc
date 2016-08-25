@@ -25,6 +25,7 @@
 #include <linux/rtnetlink.h>
 #include <linux/unistd.h>
 #include <linux/version.h>
+#include <linux/bpf_common.h>
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <stdio.h>
@@ -33,6 +34,7 @@
 #include <sys/ioctl.h>
 #include <sys/resource.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include "libbpf.h"
 #include "perf_reader.h"
@@ -135,13 +137,15 @@ int bpf_get_next_key(int fd, void *key, void *next_key)
 #define ROUND_UP(x, n) (((x) + (n) - 1u) & ~((n) - 1u))
 
 char bpf_log_buf[LOG_BUF_SIZE];
+char ext_bpf_log_buf[EXT_LOG_BUF_SIZE];
 
 int bpf_prog_load(enum bpf_prog_type prog_type,
                   const struct bpf_insn *insns, int prog_len,
                   const char *license, unsigned kern_version,
-                  char *log_buf, unsigned log_buf_size)
+                  char *log_buf, unsigned long long log_buf_size)
 {
   union bpf_attr attr;
+  bool large_buffer = false;
   memset(&attr, 0, sizeof(attr));
   attr.prog_type = prog_type;
   attr.insns = ptr_to_u64((void *) insns);
@@ -156,6 +160,7 @@ int bpf_prog_load(enum bpf_prog_type prog_type,
     log_buf[0] = 0;
 
   int ret = syscall(__NR_bpf, BPF_PROG_LOAD, &attr, sizeof(attr));
+  
   if (ret < 0 && errno == EPERM) {
     // When EPERM is returned, two reasons are possible:
     //  1. user has no permissions for bpf()
@@ -169,17 +174,31 @@ int bpf_prog_load(enum bpf_prog_type prog_type,
     if (getrlimit(RLIMIT_MEMLOCK, &rl) == 0) {
       rl.rlim_max = RLIM_INFINITY;
       rl.rlim_cur = rl.rlim_max;
-      if (setrlimit(RLIMIT_MEMLOCK, &rl) == 0)
+      if (setrlimit(RLIMIT_MEMLOCK, &rl) == 0) {
         ret = syscall(__NR_bpf, BPF_PROG_LOAD, &attr, sizeof(attr));
+      }
     }
   }
 
   if (ret < 0 && !log_buf) {
     // caller did not specify log_buf but failure should be printed,
     // so call recursively and print the result to stderr
+    
     bpf_prog_load(prog_type, insns, prog_len, license, kern_version,
-        bpf_log_buf, LOG_BUF_SIZE);
-    fprintf(stderr, "bpf: %s\n%s\n", strerror(errno), bpf_log_buf);
+                  bpf_log_buf, LOG_BUF_SIZE);
+    if (errno == ENOSPC) {    
+        bpf_prog_load(prog_type, insns, prog_len, license, kern_version,
+                      ext_bpf_log_buf, EXT_LOG_BUF_SIZE);
+        large_buffer = true;
+    } else {
+        
+        large_buffer = false;
+    }
+    if (attr.insn_cnt > BPF_MAXINSNS )
+       fprintf(stderr, "bpf: %s. Program too large (%d insns), at most %d insns\n\n", strerror(errno), attr.insn_cnt, BPF_MAXINSNS );
+    else 
+       fprintf(stderr, "bpf: %s\n%s\n", strerror(errno), large_buffer ? ext_bpf_log_buf : bpf_log_buf);
+    
   }
   return ret;
 }

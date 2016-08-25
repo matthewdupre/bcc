@@ -31,7 +31,7 @@ int bpf_delete_elem(int fd, void *key);
 int bpf_get_next_key(int fd, void *key, void *next_key);
 
 int bpf_prog_load(enum bpf_prog_type prog_type, const struct bpf_insn *insns, int insn_len,
-  const char *license, unsigned kern_version, char *log_buf, unsigned log_buf_size);
+  const char *license, unsigned kern_version, char *log_buf, unsigned long long log_buf_size);
 int bpf_attach_socket(int sockfd, int progfd);
 
 /* create RAW socket and bind to interface 'name' */

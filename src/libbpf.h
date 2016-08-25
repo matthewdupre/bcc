@@ -34,7 +34,7 @@ int bpf_get_next_key(int fd, void *key, void *next_key);
 int bpf_prog_load(enum bpf_prog_type prog_type,
 		  const struct bpf_insn *insns, int insn_len,
 		  const char *license, unsigned kern_version,
-		  char *log_buf, unsigned log_buf_size);
+		  char *log_buf, unsigned long long log_buf_size);
 int bpf_attach_socket(int sockfd, int progfd);
 
 /* create RAW socket and bind to interface 'name' */
@@ -65,7 +65,10 @@ void * bpf_open_perf_buffer(perf_reader_raw_cb raw_cb, void *cb_cookie, int pid,
 int bpf_attach_xdp(const char *dev_name, int progfd);
 
 #define LOG_BUF_SIZE 65536
+#define EXT_LOG_BUF_SIZE 2*LOG_BUF_SIZE
+
 extern char bpf_log_buf[LOG_BUF_SIZE];
+extern char ext_bpf_log_buf[EXT_LOG_BUF_SIZE];
 
 // Put non-static/inline functions in their own section with this prefix +
 // fn_name to enable discovery by the bcc library.
