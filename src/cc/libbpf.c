@@ -145,7 +145,9 @@ int bpf_prog_load(enum bpf_prog_type prog_type,
                   char *log_buf, unsigned long long log_buf_size)
 {
   union bpf_attr attr;
-  bool large_buffer = false;
+  char *bpf_log_buffer = NULL;
+  unsigned long long buffer_size = 0;
+
   memset(&attr, 0, sizeof(attr));
   attr.prog_type = prog_type;
   attr.insns = ptr_to_u64((void *) insns);
@@ -160,7 +162,12 @@ int bpf_prog_load(enum bpf_prog_type prog_type,
     log_buf[0] = 0;
 
   int ret = syscall(__NR_bpf, BPF_PROG_LOAD, &attr, sizeof(attr));
-  
+
+  if (attr.insn_cnt > BPF_MAXINSNS ) {
+       fprintf(stderr, "bpf: %s. Program too large (%d insns), at most %d insns\n\n", strerror(errno), attr.insn_cnt, BPF_MAXINSNS );
+       return ret;
+  }
+ 
   if (ret < 0 && errno == EPERM) {
     // When EPERM is returned, two reasons are possible:
     //  1. user has no permissions for bpf()
@@ -183,22 +190,12 @@ int bpf_prog_load(enum bpf_prog_type prog_type,
   if (ret < 0 && !log_buf) {
     // caller did not specify log_buf but failure should be printed,
     // so call recursively and print the result to stderr
-    
+    buffer_size = attr.insn_cnt * 128;
+    bpf_log_buffer = (char *)malloc( buffer_size * sizeof(char)); 
     bpf_prog_load(prog_type, insns, prog_len, license, kern_version,
-                  bpf_log_buf, LOG_BUF_SIZE);
-    if (errno == ENOSPC) {    
-        bpf_prog_load(prog_type, insns, prog_len, license, kern_version,
-                      ext_bpf_log_buf, EXT_LOG_BUF_SIZE);
-        large_buffer = true;
-    } else {
-        
-        large_buffer = false;
-    }
-    if (attr.insn_cnt > BPF_MAXINSNS )
-       fprintf(stderr, "bpf: %s. Program too large (%d insns), at most %d insns\n\n", strerror(errno), attr.insn_cnt, BPF_MAXINSNS );
-    else 
-       fprintf(stderr, "bpf: %s\n%s\n", strerror(errno), large_buffer ? ext_bpf_log_buf : bpf_log_buf);
-    
+                  bpf_log_buffer, buffer_size);
+    fprintf(stderr, "bpf: %s\n%s\n", strerror(errno), bpf_log_buffer);
+    free(bpf_log_buffer); 
   }
   return ret;
 }
