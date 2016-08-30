@@ -18,7 +18,7 @@ int on_packet(struct __sk_buff *skb) {
 
   u32 orig_dip = 0;
   u32 orig_sip = 0;
-  struct IPLeaf *xleaf = 0;
+  struct IPLeaf *xleaf;
 
   ethernet: {
     struct ethernet_t *ethernet = cursor_advance(cursor, sizeof(*ethernet));
@@ -65,8 +65,6 @@ int on_packet(struct __sk_buff *skb) {
       ip->src = xleaf->xsip;
       incr_cksum_l3(&ip->hchecksum, orig_sip, xleaf->xsip);
       lock_xadd(&xleaf->ip_xlated_pkts, 1);
-    } else {
-      goto EOP;
     }
     switch (ip->nextp) {
       case 6: goto tcp;
