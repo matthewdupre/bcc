@@ -11,7 +11,6 @@ add_test(NAME c_test_static COMMAND ${TEST_WRAPPER} c_test_static sudo ${CMAKE_C
 add_executable(test_libbcc
 	test_libbcc.cc
 	test_c_api.cc
-        test_bpf_error.cc
 	test_usdt_args.cc
 	test_usdt_probes.cc)
 
