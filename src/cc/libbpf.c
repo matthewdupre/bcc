@@ -136,9 +136,6 @@ int bpf_get_next_key(int fd, void *key, void *next_key)
 
 #define ROUND_UP(x, n) (((x) + (n) - 1u) & ~((n) - 1u))
 
-char bpf_log_buf[LOG_BUF_SIZE];
-char ext_bpf_log_buf[EXT_LOG_BUF_SIZE];
-
 int bpf_prog_load(enum bpf_prog_type prog_type,
                   const struct bpf_insn *insns, int prog_len,
                   const char *license, unsigned kern_version,
