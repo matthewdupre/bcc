@@ -25,7 +25,7 @@ parser = b.get_table("parser")
 parser[c_int(1)] = c_int(outer_fn.fd)
 parser[c_int(2)] = c_int(inner_fn.fd)
 
-ifc = ipdb.interfaces.eth0
+ifc = ipdb.interfaces.ens4
 
 ipr.tc("add", "ingress", ifc.index, "ffff:")
 ipr.tc("add-filter", "bpf", ifc.index, ":1", fd=ingress_fn.fd,
