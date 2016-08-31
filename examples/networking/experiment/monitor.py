@@ -69,12 +69,7 @@ while True:
 
     prev = tmp
 
-    with open("./chord-transitions/data/tunnel.json.new", "w") as f:
-        json.dump(result_total, f)
-    rename("./chord-transitions/data/tunnel.json.new", "./chord-transitions/data/tunnel.json")
-    with open("./chord-transitions/data/tunnel-delta.json.new", "w") as f:
-        json.dump(result_delta, f)
-    rename("./chord-transitions/data/tunnel-delta.json.new", "./chord-transitions/data/tunnel-delta.json")
+    print result_total
     sleep(5)
 ipdb.release()
 
